@@ -1,0 +1,72 @@
+/*
+ *
+ * Copyright 2017 gRPC authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+// This is a fork of google.golang.org/grpc/internal/backoff written in a
+// more extendable way
+
+package exponential
+
+import (
+	"math/rand"
+	"sync"
+	"time"
+)
+
+// Exponential implements Exponential backoff algorithm as defined in
+// https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md.
+type Exponential struct {
+	r      *rand.Rand
+	Config Config
+	mu     sync.Mutex
+}
+
+func New() *Exponential {
+	var e = &Exponential{}
+	e.Config = DefaultConfig
+	e.r = rand.New(rand.NewSource(time.Now().UnixNano()))
+	return e
+}
+
+// Backoff returns the amount of time to wait before the next retry given the
+// number of retries.
+func (e *Exponential) Backoff(retries int) time.Duration {
+	if retries == 0 {
+		return e.Config.BaseDelay
+	}
+	backoff, max := float64(e.Config.BaseDelay), float64(e.Config.MaxDelay)
+	for backoff < max && retries > 0 {
+		backoff *= e.Config.Multiplier
+		retries--
+	}
+	if backoff > max {
+		backoff = max
+	}
+	// Randomize backoff delays so that if a cluster of requests start at
+	// the same time, they won't operate in lockstep.
+	backoff *= 1 + e.Config.Jitter*(e.float64()*2-1)
+	if backoff < 0 {
+		return 0
+	}
+	return time.Duration(backoff)
+}
+
+func (e *Exponential) float64() float64 {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.r.Float64()
+}
