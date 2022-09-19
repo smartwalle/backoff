@@ -6,9 +6,7 @@ import (
 )
 
 func main() {
-	var backoff = exponential.New()
-
 	for i := 0; i < 10; i++ {
-		fmt.Println(backoff.Backoff(i))
+		fmt.Println(exponential.Default.Backoff(i))
 	}
 }

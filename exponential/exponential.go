@@ -27,6 +27,10 @@ import (
 	"time"
 )
 
+var (
+	Default = New()
+)
+
 // Exponential implements Exponential backoff algorithm as defined in
 // https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md.
 type Exponential struct {
