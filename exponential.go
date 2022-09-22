@@ -19,7 +19,7 @@
 // This is a fork of google.golang.org/grpc/internal/backoff written in a
 // more extendable way
 
-package exponential
+package backoff
 
 import (
 	"math/rand"
@@ -34,27 +34,39 @@ var (
 // Exponential implements Exponential backoff algorithm as defined in
 // https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md.
 type Exponential struct {
-	r      *rand.Rand
-	Config Config
-	mu     sync.Mutex
+	r  *rand.Rand
+	mu sync.Mutex
+
+	// BaseDelay is the amount of time to backoff after the first failure.
+	BaseDelay time.Duration
+	// Multiplier is the factor with which to multiply backoffs after a
+	// failed retry. Should ideally be greater than 1.
+	Multiplier float64
+	// Jitter is the factor with which backoffs are randomized.
+	Jitter float64
+	// MaxDelay is the upper bound of backoff delay.
+	MaxDelay time.Duration
 }
 
 func New() *Exponential {
 	var e = &Exponential{}
-	e.Config = DefaultConfig
 	e.r = rand.New(rand.NewSource(time.Now().UnixNano()))
+	e.BaseDelay = 1.0 * time.Second
+	e.Multiplier = 1.6
+	e.Jitter = 0.2
+	e.MaxDelay = 120 * time.Second
 	return e
 }
 
-// Backoff returns the amount of time to wait before the next retry given the
+// Duration returns the amount of time to wait before the next retry given the
 // number of retries.
-func (e *Exponential) Backoff(retries int) time.Duration {
+func (e *Exponential) Duration(retries int) time.Duration {
 	if retries == 0 {
-		return e.Config.BaseDelay
+		return e.BaseDelay
 	}
-	backoff, max := float64(e.Config.BaseDelay), float64(e.Config.MaxDelay)
+	backoff, max := float64(e.BaseDelay), float64(e.MaxDelay)
 	for backoff < max && retries > 0 {
-		backoff *= e.Config.Multiplier
+		backoff *= e.Multiplier
 		retries--
 	}
 	if backoff > max {
@@ -62,7 +74,7 @@ func (e *Exponential) Backoff(retries int) time.Duration {
 	}
 	// Randomize backoff delays so that if a cluster of requests start at
 	// the same time, they won't operate in lockstep.
-	backoff *= 1 + e.Config.Jitter*(e.float64()*2-1)
+	backoff *= 1 + e.Jitter*(e.float64()*2-1)
 	if backoff < 0 {
 		return 0
 	}
