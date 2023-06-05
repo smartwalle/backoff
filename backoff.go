@@ -16,8 +16,7 @@
  *
  */
 
-// This is a fork of google.golang.org/grpc/internal/backoff written in a
-// more extendable way
+// This is a fork of google.golang.org/grpc/internal/backoff
 
 package backoff
 
