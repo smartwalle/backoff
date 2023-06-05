@@ -25,8 +25,8 @@ import (
 	"time"
 )
 
-// Backoff defines the methodology for backing off.
-type Backoff interface {
+// Strategy defines the methodology for backing off.
+type Strategy interface {
 	// Duration returns the amount of time to wait before the next retry given
 	// the number of consecutive failures.
 	Duration(retries int) time.Duration

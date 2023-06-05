@@ -7,6 +7,6 @@ import (
 
 func main() {
 	for i := 0; i < 10; i++ {
-		fmt.Println(backoff.Default.Duration(i))
+		fmt.Println(backoff.DefaultExponential.Duration(i))
 	}
 }

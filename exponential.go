@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	Default = New()
+	DefaultExponential = NewExponential()
 )
 
 // Exponential implements Exponential backoff algorithm as defined in
@@ -48,7 +48,7 @@ type Exponential struct {
 	MaxDelay time.Duration
 }
 
-func New() *Exponential {
+func NewExponential() *Exponential {
 	var e = &Exponential{}
 	e.r = rand.New(rand.NewSource(time.Now().UnixNano()))
 	e.BaseDelay = 1.0 * time.Second
